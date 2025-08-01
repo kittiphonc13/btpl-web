@@ -3,13 +3,13 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth, AuthGuard } from '@/context/AuthContext';
-import { DateTimePicker, LocalizationProvider } from '@mui/x-date-pickers';
-import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
-import dayjs, { Dayjs } from 'dayjs';
-import { TextField } from '@mui/material';
-import { useValidatedForm, useFormSubmission } from '@/hooks/useValidatedForm';
-import { bloodPressureSchema, BloodPressureFormData, sanitizeInput } from '@/lib/validation';
-import { SafeError, handleDatabaseError, handleValidationError } from '@/lib/errorHandler';
+import { Button } from '@mui/material';
+import AddIcon from '@mui/icons-material/Add';
+import dayjs from 'dayjs';
+import { useFormSubmission } from '@/hooks/useValidatedForm';
+import { BloodPressureFormData, sanitizeInput } from '@/lib/validation';
+import { handleDatabaseError, handleValidationError } from '@/lib/errorHandler';
+import AddBloodPressureModal from '@/components/AddBloodPressureModal';
 
 interface BloodPressureRecord {
   record_id: string;
@@ -24,32 +24,20 @@ interface BloodPressureRecord {
 function HomePageContent() {
   const { user } = useAuth(); // AuthGuard ensures user is not null here
   const [records, setRecords] = useState<BloodPressureRecord[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
   const [exportMessage, setExportMessage] = useState<string | null>(null);
-
-  // Use validated form with Zod schema
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-    setValue,
-    watch,
-    reset,
-  } = useValidatedForm(bloodPressureSchema, {
-    defaultValues: {
-      systolic: 120,
-      diastolic: 80,
-      heartRate: 70,
-      notes: '',
-      recordDateTime: dayjs().toISOString(),
-    },
-  });
+  
+  // Modal state
+  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
 
   // Use form submission hook for error handling
   const { submitError, submitSuccess, handleSubmit: handleFormSubmit, clearMessages } = useFormSubmission<BloodPressureFormData>();
 
-  // Watch for date/time changes
-  const [recordDateTime, setRecordDateTime] = useState<Dayjs | null>(dayjs());
+  // Modal handlers
+  const handleOpenModal = () => setIsModalOpen(true);
+  const handleCloseModal = () => setIsModalOpen(false);
 
   async function fetchBloodPressureRecords() {
     try {
@@ -106,33 +94,22 @@ function HomePageContent() {
           throw handleDatabaseError(error);
         }
 
-        // Clear form and refresh data
-        reset({
-          systolic: 120,
-          diastolic: 80,
-          heartRate: 70,
-          notes: '',
-          recordDateTime: dayjs().toISOString(),
-        });
-        setRecordDateTime(dayjs());
-        fetchBloodPressureRecords(); // Refresh the list
+        // Refresh the records list
+        fetchBloodPressureRecords();
         
-      } catch (error: any) {
-        if (error instanceof SafeError) {
-          throw error;
+        // No return value needed as the function expects void
+        setMessage('Blood pressure record added successfully!');
+      } catch (error) {
+        if (error instanceof Error) {
+          throw handleValidationError(error);
+        } else {
+          throw new Error('An unknown error occurred');
         }
-        throw handleValidationError(error);
       }
     }, data);
   };
 
-  // Handle date/time picker changes
-  const handleDateTimeChange = (newValue: Dayjs | null) => {
-    setRecordDateTime(newValue);
-    if (newValue) {
-      setValue('recordDateTime', newValue.toISOString());
-    }
-  };
+
 
   const handleExport = async () => {
     try {
@@ -182,129 +159,124 @@ function HomePageContent() {
           {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">{error}</div>}
           {message && <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4" role="alert">{message}</div>}
 
-          {/* Form to add new blood pressure record */}
+          {/* Blood pressure records section with Add button */}
           <div className="mb-8">
-            <h3 className="text-xl font-bold mb-4">Add New Record</h3>
-            <form onSubmit={handleSubmit} className="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
-              <div className="mb-4">
-                <label htmlFor="recordDateTime" className="block text-gray-700 text-sm font-bold mb-2">
-                  Record Date & Time:
-                </label>
-                <LocalizationProvider dateAdapter={AdapterDayjs}>
-                  <DateTimePicker
-                    value={recordDateTime}
-                    onChange={(newValue) => setRecordDateTime(newValue)}
-                    // renderInput={(params) => <TextField {...params} fullWidth required margin="normal" />}
-                  />
-                </LocalizationProvider>
-              </div>
-              <div className="mb-4">
-                <label htmlFor="systolic" className="block text-gray-700 text-sm font-bold mb-2">
-                  Systolic (mmHg):
-                </label>
-                <TextField
-                  fullWidth
-                  id="systolic"
-                  variant="outlined"
-                  type="number"
-                  value={systolic}
-                  onChange={(e) => setSystolic(Number(e.target.value))}
-                  required
-                  margin="normal"
-                />
-              </div>
-              <div className="mb-4">
-                <label htmlFor="diastolic" className="block text-gray-700 text-sm font-bold mb-2">
-                  Diastolic (mmHg):
-                </label>
-                <TextField
-                  fullWidth
-                  id="diastolic"
-                  variant="outlined"
-                  type="number"
-                  value={diastolic}
-                  onChange={(e) => setDiastolic(Number(e.target.value))}
-                  required
-                  margin="normal"
-                />
-              </div>
-              <div className="mb-4">
-                <label htmlFor="heartRate" className="block text-gray-700 text-sm font-bold mb-2">
-                  Heart Rate (bpm):
-                </label>
-                <TextField
-                  fullWidth
-                  id="heartRate"
-                  variant="outlined"
-                  type="number"
-                  value={heartRate}
-                  onChange={(e) => setHeartRate(Number(e.target.value))}
-                  required
-                  margin="normal"
-                />
-              </div>
-              <div className="mb-6">
-                <label htmlFor="notes" className="block text-gray-700 text-sm font-bold mb-2">
-                  Notes:
-                </label>
-                <TextField
-                  fullWidth
-                  id="notes"
-                  variant="outlined"
-                  multiline
-                  rows={4}
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  margin="normal"
-                />
-              </div>
-              <button
-                type="submit"
-                className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold">Latest Blood Pressure Records</h3>
+              <Button 
+                variant="contained" 
+                color="primary" 
+                startIcon={<AddIcon />}
+                onClick={handleOpenModal}
+                aria-label="Add new blood pressure record"
               >
                 Add Record
-              </button>
-            </form>
+              </Button>
+            </div>
+
+            {records.length === 0 ? (
+              <p>No blood pressure records found. Add your first record!</p>
+            ) : (
+              <>
+                {/* Table view for larger screens */}
+                <div className="hidden md:block overflow-x-auto mb-6">
+                  <table className="min-w-full bg-white" aria-label="Blood pressure records">
+                    <caption className="sr-only">Blood pressure measurements history</caption>
+                    <thead>
+                      <tr>
+                        <th scope="col" className="py-2 px-4 border-b text-left">Date & Time</th>
+                        <th scope="col" className="py-2 px-4 border-b text-left">Systolic</th>
+                        <th scope="col" className="py-2 px-4 border-b text-left">Diastolic</th>
+                        <th scope="col" className="py-2 px-4 border-b text-left">Heart Rate</th>
+                        <th scope="col" className="py-2 px-4 border-b text-left">Notes</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {records.map((record) => (
+                        <tr key={record.record_id}>
+                          <td className="py-2 px-4 border-b">{new Date(record.record_datetime).toLocaleString()}</td>
+                          <td className="py-2 px-4 border-b">{record.systolic} <span className="text-xs text-gray-500">mmHg</span></td>
+                          <td className="py-2 px-4 border-b">{record.diastolic} <span className="text-xs text-gray-500">mmHg</span></td>
+                          <td className="py-2 px-4 border-b">{record.heart_rate} <span className="text-xs text-gray-500">bpm</span></td>
+                          <td className="py-2 px-4 border-b">{record.notes || <span className="text-gray-400 italic">No notes</span>}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                
+                {/* Card view for mobile screens */}
+                <div className="md:hidden space-y-4 mb-6">
+                  {records.map((record) => (
+                    <div key={record.record_id} className="bg-white p-4 rounded-lg shadow border border-gray-200">
+                      <div className="text-sm font-semibold text-gray-500 mb-2">
+                        {new Date(record.record_datetime).toLocaleString()}
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <div className="text-xs text-gray-500">Systolic</div>
+                          <div className="font-bold">{record.systolic} <span className="text-xs font-normal text-gray-500">mmHg</span></div>
+                        </div>
+                        <div>
+                          <div className="text-xs text-gray-500">Diastolic</div>
+                          <div className="font-bold">{record.diastolic} <span className="text-xs font-normal text-gray-500">mmHg</span></div>
+                        </div>
+                        <div>
+                          <div className="text-xs text-gray-500">Heart Rate</div>
+                          <div className="font-bold">{record.heart_rate} <span className="text-xs font-normal text-gray-500">bpm</span></div>
+                        </div>
+                      </div>
+                      {record.notes && (
+                        <div className="mt-2 pt-2 border-t border-gray-100">
+                          <div className="text-xs text-gray-500">Notes</div>
+                          <div className="text-sm">{record.notes}</div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+
+            {/* Export to Excel button */}
+            <div className="mt-4">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                <Button
+                  onClick={handleExport}
+                  variant="contained"
+                  color="secondary"
+                  className="bg-purple-500 hover:bg-purple-700"
+                  aria-label="Export blood pressure records to Excel"
+                  disabled={records.length === 0}
+                >
+                  Export to Excel
+                </Button>
+                
+                {records.length === 0 && (
+                  <p className="text-sm text-gray-500 italic">Add records to enable export</p>
+                )}
+              </div>
+              
+              {exportError && (
+                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mt-4" role="alert">
+                  <span className="block sm:inline">{exportError}</span>
+                </div>
+              )}
+              
+              {exportMessage && (
+                <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mt-4" role="alert">
+                  <span className="block sm:inline">{exportMessage}</span>
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* Display latest 25 blood pressure records */}
-          <h3 className="text-xl font-bold mb-4">Latest 25 Blood Pressure Records</h3>
-          {records.length === 0 ? (
-            <p>No blood pressure records found. Add your first record!</p>
-          ) : (
-            <div className="overflow-x-auto mb-6">
-              <table className="min-w-full bg-white">
-                <thead>
-                  <tr>
-                    <th className="py-2 px-4 border-b">Date & Time</th>
-                    <th className="py-2 px-4 border-b">Systolic</th>
-                    <th className="py-2 px-4 border-b">Diastolic</th>
-                    <th className="py-2 px-4 border-b">Heart Rate</th>
-                    <th className="py-2 px-4 border-b">Notes</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {records.map((record) => (
-                    <tr key={record.record_id}>
-                      <td className="py-2 px-4 border-b">{new Date(record.record_datetime).toLocaleString()}</td>
-                      <td className="py-2 px-4 border-b">{record.systolic}</td>
-                      <td className="py-2 px-4 border-b">{record.diastolic}</td>
-                      <td className="py-2 px-4 border-b">{record.heart_rate}</td>
-                      <td className="py-2 px-4 border-b">{record.notes}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {/* Export to Excel button */}
-          <button
-            onClick={handleExport}
-            className="bg-purple-500 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded"
-          >
-            Export to Excel
-          </button>
+          {/* Modal for adding new blood pressure record */}
+          <AddBloodPressureModal 
+            open={isModalOpen} 
+            onClose={handleCloseModal} 
+            onSubmit={onSubmit}
+          />
         </div>
       </div>
   );

@@ -4,9 +4,9 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { registerSchema, type RegisterFormData } from '@/lib/validation';
 import { useValidatedForm, useFormSubmission } from '@/hooks/useValidatedForm';
-import { handleAuthError } from '@/lib/errorHandler';
+import { handleAuthError, SafeError } from '@/lib/errorHandler';
 import { authRateLimiter, delay, formatTimeRemaining } from '@/lib/rateLimiter';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function Register() {
   const router = useRouter();
@@ -26,7 +26,13 @@ export default function Register() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState(0);
   const [isRateLimited, setIsRateLimited] = useState(false);
-  const [rateLimitMessage, setRateLimitMessage] = useState<string>('');
+    const [rateLimitMessage, setRateLimitMessage] = useState<string>('');
+  const [passwordValue, setPasswordValue] = useState('');
+
+  const watchedPassword = watch('password');
+  useEffect(() => {
+    setPasswordValue(watchedPassword);
+  }, [watchedPassword]);
 
   const onSubmit = async (data: RegisterFormData) => {
     clearMessages();
@@ -58,7 +64,7 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
+        <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
       <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
         <h2 className="text-2xl font-bold mb-6 text-center">Register</h2>
         <form onSubmit={handleSubmit(onSubmit)}>
@@ -98,21 +104,21 @@ export default function Register() {
             )}
             
             {/* Password strength indicator */}
-            {watch('password') && (
+                        {passwordValue && (
               <div className="mt-2">
                 <div className="text-xs text-gray-600 mb-1">Password strength:</div>
                 <div className="flex space-x-1">
                   <div className={`h-1 w-1/4 rounded ${
-                    watch('password').length >= 8 ? 'bg-green-500' : 'bg-gray-300'
+                                        passwordValue.length >= 8 ? 'bg-green-500' : 'bg-gray-300'
                   }`}></div>
                   <div className={`h-1 w-1/4 rounded ${
-                    /[A-Z]/.test(watch('password')) ? 'bg-green-500' : 'bg-gray-300'
+                                        /[A-Z]/.test(passwordValue) ? 'bg-green-500' : 'bg-gray-300'
                   }`}></div>
                   <div className={`h-1 w-1/4 rounded ${
-                    /[a-z]/.test(watch('password')) ? 'bg-green-500' : 'bg-gray-300'
+                                        /[a-z]/.test(passwordValue) ? 'bg-green-500' : 'bg-gray-300'
                   }`}></div>
                   <div className={`h-1 w-1/4 rounded ${
-                    /\d/.test(watch('password')) ? 'bg-green-500' : 'bg-gray-300'
+                                        /\d/.test(passwordValue) ? 'bg-green-500' : 'bg-gray-300'
                   }`}></div>
                 </div>
                 <div className="text-xs text-gray-500 mt-1">
@@ -185,7 +191,7 @@ export default function Register() {
               href="/login"
               className="inline-block align-baseline font-bold text-sm text-blue-500 hover:text-blue-800"
             >
-              Already have an account? Login
+              Have an account? Login
             </a>
           </div>
         </form>

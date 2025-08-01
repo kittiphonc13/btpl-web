@@ -26,25 +26,33 @@ export default function Profile() {
 
   async function getProfile() {
     try {
+      // Add proper headers to avoid 406 Not Acceptable errors
       const { data, error, status } = await supabase
         .from('user_profiles')
         .select(`full_name, nickname, date_of_birth, medical_conditions, gender`)
         .eq('user_id', user?.id)
-        .single();
+        .single()
+        .throwOnError();
 
-      if (error && status !== 406) {
-        throw error;
+      // Status 406 means no profile exists yet, which is not an error
+      if (status === 406) {
+        console.log('No profile exists yet, ready for creation');
+        return;
       }
 
       if (data) {
-        setFullName(data.full_name);
-        setNickname(data.nickname);
+        setFullName(data.full_name || '');
+        setNickname(data.nickname || '');
         setDateOfBirth(data.date_of_birth ? dayjs(data.date_of_birth) : null);
-        setMedicalConditions(data.medical_conditions);
-        setGender(data.gender);
+        setMedicalConditions(data.medical_conditions || '');
+        setGender(data.gender || '');
       }
     } catch (error: any) {
-      setError(error.message);
+      console.error('Error fetching profile:', error);
+      // Don't show 406 errors to the user as they're expected when profile doesn't exist
+      if (error.code !== 'PGRST116') {
+        setError(error.message);
+      }
     }
   }
 
