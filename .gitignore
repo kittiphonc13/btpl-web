@@ -1,0 +1,19 @@
+# Windsurf
+.windsurf/
+
+# Frontend (Next.js)
+bpl-web-frontend/node_modules/
+bpl-web-frontend/.next/
+bpl-web-frontend/out/
+bpl-web-frontend/.DS_Store
+
+# Backend (Python)
+bpl-web-backend/__pycache__/
+bpl-web-backend/*.pyc
+bpl-web-backend/.venv/
+bpl-web-backend/venv/
+bpl-web-backend/env/
+
+# IDE & Editor specific
+.vscode/
+.idea/
