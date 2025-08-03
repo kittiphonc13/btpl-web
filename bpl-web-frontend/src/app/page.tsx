@@ -9,7 +9,7 @@ import dayjs from 'dayjs';
 import { useFormSubmission } from '@/hooks/useValidatedForm';
 import { BloodPressureFormData, sanitizeInput } from '@/lib/validation';
 import { handleDatabaseError, handleValidationError } from '@/lib/errorHandler';
-import AddBloodPressureModal from '@/components/AddBloodPressureModal';
+import { AddBloodPressureModal } from '@/components/AddBloodPressureModal';
 
 interface BloodPressureRecord {
   record_id: string;
@@ -33,7 +33,7 @@ function HomePageContent() {
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
 
   // Use form submission hook for error handling
-  const { submitError, submitSuccess, handleSubmit: handleFormSubmit, clearMessages } = useFormSubmission<BloodPressureFormData>();
+  const { submitError, submitSuccess, handleSubmit: handleFormSubmit, clearMessages, isSubmitting } = useFormSubmission<BloodPressureFormData>();
 
   // Modal handlers
   const handleOpenModal = () => setIsModalOpen(true);
@@ -276,6 +276,7 @@ function HomePageContent() {
             open={isModalOpen} 
             onClose={handleCloseModal} 
             onSubmit={onSubmit}
+            isSubmitting={isSubmitting}
           />
         </div>
       </div>

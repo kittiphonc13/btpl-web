@@ -12,10 +12,11 @@ import CloseIcon from '@mui/icons-material/Close';
 interface AddBloodPressureModalProps {
   open: boolean;
   onClose: () => void;
-  onSubmit: (data: BloodPressureFormData) => Promise<void>;
+  onSubmit: (data: BloodPressureFormData) => void;
+  isSubmitting: boolean;
 }
 
-export default function AddBloodPressureModal({ open, onClose, onSubmit }: AddBloodPressureModalProps) {
+export const AddBloodPressureModal: React.FC<AddBloodPressureModalProps> = ({ open, onClose, onSubmit, isSubmitting }) => {
   // Ref for initial focus
   const initialFocusRef = useRef<HTMLButtonElement>(null);
   const modalTitleId = 'modal-blood-pressure-title';
@@ -31,7 +32,7 @@ export default function AddBloodPressureModal({ open, onClose, onSubmit }: AddBl
   const {
     register,
     handleSubmit,
-    formState: { errors, isSubmitting },
+    formState: { errors },
     setValue,
     reset,
   } = useValidatedForm(bloodPressureSchema, {
@@ -250,15 +251,14 @@ export default function AddBloodPressureModal({ open, onClose, onSubmit }: AddBl
             >
               Cancel
             </Button>
-            <Button 
-              type="submit" 
-              variant="contained" 
+            <Button
+              type="submit"
+              variant="contained"
               color="primary"
-              className="px-6"
+              fullWidth
               disabled={isSubmitting}
-              aria-label="Submit and add new blood pressure record"
             >
-              Add Record
+              {isSubmitting ? 'Adding...' : 'Add Record'}
             </Button>
           </div>
         </form>
